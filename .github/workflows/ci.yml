@@ -3,8 +3,12 @@ name: CI
 on:
   push:
     branches: [ main, master, develop ]
+    paths:
+      - 'march_sudoku/**'
   pull_request:
     branches: [ main, master, develop ]
+    paths:
+      - 'march_sudoku/**'
 
 jobs:
   test:
@@ -48,3 +52,17 @@ jobs:
           name: android-apk
           path: march_sudoku/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 7
+
+      - name: Create version tag
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        run: |
+          VERSION=$(grep '^version:' march_sudoku/pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
+          TAG="v${VERSION}"
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, skipping"
+          else
+            echo "Creating tag $TAG"
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
