@@ -1,0 +1,67 @@
+name: Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+      
+      - name: Install dependencies
+        run: make setup
+      
+      - name: Build web release
+        run: make build-web
+      
+      - name: Build Android APK
+        run: make build-android
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+      
+      - name: Deploy web to S3 and CloudFront
+        run: |
+          make deploy-web \
+            S3_WEB_BUCKET="${{ secrets.S3_WEB_BUCKET }}" \
+            CLOUDFRONT_DISTRIBUTION_ID="${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            AWS_REGION="${{ secrets.AWS_REGION || 'us-east-1' }}"
+      
+      - name: Deploy Android APK to S3
+        run: |
+          make deploy-android \
+            S3_ARTIFACTS_BUCKET="${{ secrets.S3_ARTIFACTS_BUCKET }}" \
+            AWS_REGION="${{ secrets.AWS_REGION || 'us-east-1' }}"
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            march_sudoku/build/app/outputs/flutter-apk/app-release.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload web build to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            march_sudoku/build/web/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
