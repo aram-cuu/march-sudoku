@@ -5,7 +5,7 @@ resource "aws_iam_user" "github_deploy" {
   path = "/ci/"
 
   tags = merge(local.common_tags, {
-    Purpose = "GitHub Actions deploy (S3 + CloudFront)"
+    Purpose = "GitHub Actions deploy - S3 + CloudFront"
   })
 }
 
