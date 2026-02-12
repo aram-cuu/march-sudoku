@@ -124,7 +124,7 @@ When a user interacts with the UI, the action is handled by the `GameProvider`. 
 
 ## CI/CD and release pipeline
 
-The project uses a two-stage pipeline. The CI workflow runs on every push to `main` when app code or the Makefile changes. After lint, test, and build steps pass, it auto-creates a version tag from `pubspec.yaml`. That tag triggers the deploy workflow.
+The project uses a two-stage pipeline. The CI workflow runs on every push to `main` when app code or the Makefile changes. It runs lint, tests, and builds, then uploads artifacts. To deploy, you create and push a version tag, which triggers the deploy workflow separately.
 
 ```mermaid
 flowchart TD
@@ -133,8 +133,7 @@ flowchart TD
     CI --> Test["Test"]
     CI --> Build["Build web + Android"]
     Build --> Artifacts["Upload workflow artifacts (7 day retention)"]
-    Build --> Tag["Auto-create version tag"]
-    Tag --> Deploy["Deploy workflow"]
+    Tag["Push version tag"] --> Deploy["Deploy workflow"]
     Deploy --> S3Web["S3 web bucket"]
     Deploy --> S3Apk["S3 artifacts bucket"]
     Deploy --> Release["GitHub Release"]

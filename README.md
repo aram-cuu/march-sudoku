@@ -136,9 +136,20 @@ The APK is stored at `s3://your-artifacts-bucket/android/<version>/march_sudoku.
 
 ### Versioning
 
-The application uses semantic versioning driven by the `version` field in `pubspec.yaml`. When CI passes on `main`, it reads the version, creates a git tag (e.g. `v1.0.0`), and pushes it. That tag push triggers the deploy workflow automatically.
+The application uses semantic versioning driven by git tags. The Makefile extracts the version from the latest tag and passes it to the Flutter build via `--build-name`.
 
-To release a new version, bump `version` in `march_sudoku/pubspec.yaml` and push to `main`. The pipeline handles the rest.
+To release a new version:
+
+1. Bump `version` in `march_sudoku/pubspec.yaml`
+2. Commit and push to `main` (CI runs lint, test, build)
+3. Create and push the tag:
+
+```bash
+git tag v1.1.0
+git push origin v1.1.0
+```
+
+The tag push triggers the deploy workflow, which builds, deploys to AWS, and creates a GitHub Release.
 
 ## Accessing the deployed application
 
@@ -184,7 +195,7 @@ The S3 bucket has versioning enabled, so even if the same version is redeployed,
 
 Defined in `.github/workflows/ci.yml`. Triggers on pushes and pull requests to `main`, `master`, or `develop` when files in `march_sudoku/` or the `Makefile` are modified.
 
-The workflow runs lint, tests, and builds for both web and Android. Build artifacts are uploaded to the workflow run and retained for 7 days. On a successful push to `main` or `master`, the workflow reads the version from `pubspec.yaml` and creates a git tag if one does not already exist for that version. The tag push then triggers the deploy workflow.
+The workflow runs lint, tests, and builds for both web and Android. Build artifacts are uploaded to the workflow run and retained for 7 days.
 
 ### Deploy workflow
 
@@ -226,10 +237,11 @@ Configure the following in the GitHub repository under **Settings, Secrets and v
 The full release lifecycle from code change to production:
 
 ```
-Push to main --> CI (lint, test, build) --> Auto-tag vX.Y.Z --> Deploy workflow
-  --> S3 web bucket + CloudFront invalidation (web)
-  --> S3 artifacts bucket (Android APK)
-  --> GitHub Release (Android APK)
+Push to main --> CI (lint, test, build)
+Tag vX.Y.Z   --> Deploy workflow
+                --> S3 web bucket + CloudFront invalidation (web)
+                --> S3 artifacts bucket (Android APK)
+                --> GitHub Release (Android APK)
 ```
 
 ## Project structure

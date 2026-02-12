@@ -15,8 +15,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     
     steps:
       - name: Checkout code
@@ -56,21 +54,3 @@ jobs:
           name: android-apk
           path: march_sudoku/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 7
-
-      - name: Create version tag and trigger deploy
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION=$(grep '^version:' march_sudoku/pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
-          TAG="v${VERSION}"
-
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists, skipping"
-          else
-            echo "Creating tag $TAG"
-            git tag "$TAG"
-            git push origin "$TAG"
-            echo "Triggering deploy workflow"
-            gh workflow run deploy.yml --ref "$TAG"
-          fi
