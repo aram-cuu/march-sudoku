@@ -5,14 +5,18 @@ on:
     branches: [ main, master, develop ]
     paths:
       - 'march_sudoku/**'
+      - 'Makefile'
   pull_request:
     branches: [ main, master, develop ]
     paths:
       - 'march_sudoku/**'
+      - 'Makefile'
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout code

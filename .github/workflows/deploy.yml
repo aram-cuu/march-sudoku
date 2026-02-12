@@ -8,6 +8,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout code
@@ -33,20 +35,20 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          aws-region: ${{ secrets.AWS_REGION }}
       
       - name: Deploy web to S3 and CloudFront
         run: |
           make deploy-web \
-            S3_WEB_BUCKET="${{ secrets.S3_WEB_BUCKET }}" \
-            CLOUDFRONT_DISTRIBUTION_ID="${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
-            AWS_REGION="${{ secrets.AWS_REGION || 'us-east-1' }}"
+            S3_WEB_BUCKET="${{ vars.S3_WEB_BUCKET }}" \
+            CLOUDFRONT_DISTRIBUTION_ID="${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            AWS_REGION="${{ secrets.AWS_REGION }}"
       
       - name: Deploy Android APK to S3
         run: |
           make deploy-android \
-            S3_ARTIFACTS_BUCKET="${{ secrets.S3_ARTIFACTS_BUCKET }}" \
-            AWS_REGION="${{ secrets.AWS_REGION || 'us-east-1' }}"
+            S3_ARTIFACTS_BUCKET="${{ vars.S3_ARTIFACTS_BUCKET }}" \
+            AWS_REGION="${{ secrets.AWS_REGION }}"
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
