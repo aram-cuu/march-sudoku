@@ -53,6 +53,6 @@ resource "aws_iam_user_policy" "github_deploy" {
   })
 }
 
-# resource "aws_iam_access_key" "github_deploy" {
-#   user = aws_iam_user.github_deploy.name
-# }
+resource "aws_iam_access_key" "github_deploy" {
+  user = aws_iam_user.github_deploy.name
+}
