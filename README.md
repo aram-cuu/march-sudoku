@@ -6,7 +6,7 @@ A Flutter Sudoku game with solving, generating, and difficulty classification fe
 
 Before running this application, ensure you have the following installed:
 
-- Flutter SDK (version 3.24.0 or later)
+- Flutter SDK (version 3.41.0 or later)
 - Dart SDK (included with Flutter)
 - Android Studio or Android SDK (for Android builds)
 - Chrome or any modern web browser (for web builds)
@@ -86,7 +86,7 @@ make build-all
 
 ### Infrastructure setup
 
-Infrastructure is managed through Terraform Cloud under the `aram-playground` organization in the `march-sudoku-production` workspace. State, locking, and run history are all handled remotely.
+Infrastructure is managed through Terraform Cloud. The organization and workspace are configured in `infrastructure/main.tf`. State, locking, and run history are all handled remotely.
 
 Before your first run, authenticate with Terraform Cloud and initialize the backend:
 
@@ -136,34 +136,65 @@ The APK is stored at `s3://your-artifacts-bucket/android/<version>/march_sudoku.
 
 ### Versioning
 
-The application uses semantic versioning driven by git tags. The Makefile extracts the version from the latest tag and passes it to the Flutter build via `--build-name`.
+The application uses semantic versioning driven by the `version` field in `pubspec.yaml`. When CI passes on `main`, it reads the version, creates a git tag (e.g. `v1.0.0`), and pushes it. That tag push triggers the deploy workflow automatically.
 
-To create a new release:
+To release a new version, bump `version` in `march_sudoku/pubspec.yaml` and push to `main`. The pipeline handles the rest.
+
+## Accessing the deployed application
+
+### Web application
+
+After a successful deploy, the web application is served through CloudFront. To get the URL:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+terraform -chdir=infrastructure output cloudfront_url
 ```
 
-Pushing a version tag triggers the deploy workflow, which builds both platforms, deploys to AWS, and creates a GitHub Release with the artifacts attached.
+Open that URL in any browser. CloudFront caches the content globally, so the app loads quickly regardless of location. After each deploy, the cache is automatically invalidated so the latest version is always served.
+
+### Android APK
+
+There are three ways to get the Android APK.
+
+**From GitHub Releases**: Go to the repository's Releases page. Each version tag has the APK attached as a downloadable asset. This is the simplest option for sharing with others.
+
+**From GitHub Actions artifacts**: Every CI run uploads the APK as a workflow artifact retained for 7 days. Navigate to **Actions**, select a workflow run, and download the `android-apk` artifact from the Artifacts section at the bottom of the run summary.
+
+**From the S3 artifacts bucket**: Each deploy uploads a versioned APK to S3. Get the bucket name from Terraform output and use the AWS CLI:
+
+```bash
+BUCKET=$(terraform -chdir=infrastructure output -raw artifacts_bucket_name)
+
+aws s3 cp \
+  s3://$BUCKET/android/1.0.0/march_sudoku.apk \
+  ./march_sudoku.apk
+```
+
+To list all available versions:
+
+```bash
+aws s3 ls s3://$BUCKET/android/
+```
+
+The S3 bucket has versioning enabled, so even if the same version is redeployed, previous uploads are preserved as non-current versions.
 
 ## CI/CD
 
 ### CI workflow
 
-Defined in `.github/workflows/ci.yml`, runs on every push and pull request to `main`, `master`, or `develop`.
+Defined in `.github/workflows/ci.yml`. Triggers on pushes and pull requests to `main`, `master`, or `develop` when files in `march_sudoku/` or the `Makefile` are modified.
 
-Steps: checkout, install dependencies, lint, test, build web, build Android. Both build artifacts (web bundle and APK) are uploaded to the workflow run and retained for 7 days.
+The workflow runs lint, tests, and builds for both web and Android. Build artifacts are uploaded to the workflow run and retained for 7 days. On a successful push to `main` or `master`, the workflow reads the version from `pubspec.yaml` and creates a git tag if one does not already exist for that version. The tag push then triggers the deploy workflow.
 
 ### Deploy workflow
 
-Defined in `.github/workflows/deploy.yml`, runs when a version tag (`v*`) is pushed.
+Defined in `.github/workflows/deploy.yml`. Triggers when a version tag (`v*`) is pushed.
 
-Steps: checkout, install dependencies, build web, build Android APK, deploy web to S3 and invalidate CloudFront, upload APK to the S3 artifacts bucket, create a GitHub Release with the APK attached.
+The workflow builds both platforms, deploys the web build to S3 and invalidates the CloudFront cache, uploads the versioned APK to the S3 artifacts bucket, and creates a GitHub Release with the APK attached.
 
-### GitHub secrets
+### GitHub secrets and variables
 
-The deploy workflow uses a dedicated IAM user (`march-sudoku-github-deploy`) created by Terraform with least-privilege access limited to the two S3 buckets and CloudFront invalidation.
+The deploy workflow uses a dedicated IAM user created by Terraform with least-privilege access limited to the two S3 buckets and CloudFront invalidation.
 
 After the first `terraform apply`, retrieve the deploy credentials from Terraform Cloud outputs or locally:
 
@@ -172,16 +203,34 @@ terraform -chdir=infrastructure output github_deploy_access_key_id
 terraform -chdir=infrastructure output -raw github_deploy_secret_access_key
 ```
 
-Then in the GitHub repository under **Settings, Secrets and variables, Actions**, add:
+Configure the following in the GitHub repository under **Settings, Secrets and variables, Actions**.
 
-| Secret | Description |
-|--------|-------------|
+**Secrets** (sensitive values):
+
+| Secret | Value |
+|--------|-------|
 | `AWS_ACCESS_KEY_ID` | Output `github_deploy_access_key_id` |
 | `AWS_SECRET_ACCESS_KEY` | Output `github_deploy_secret_access_key` |
-| `AWS_REGION` | `us-east-1` (optional, defaults to us-east-1) |
+| `AWS_REGION` | `us-east-1` |
+
+**Variables** (non-sensitive values):
+
+| Variable | Value |
+|----------|-------|
 | `S3_WEB_BUCKET` | Output `web_bucket_name` |
 | `S3_ARTIFACTS_BUCKET` | Output `artifacts_bucket_name` |
 | `CLOUDFRONT_DISTRIBUTION_ID` | Output `cloudfront_distribution_id` |
+
+### Release lifecycle
+
+The full release lifecycle from code change to production:
+
+```
+Push to main --> CI (lint, test, build) --> Auto-tag vX.Y.Z --> Deploy workflow
+  --> S3 web bucket + CloudFront invalidation (web)
+  --> S3 artifacts bucket (Android APK)
+  --> GitHub Release (Android APK)
+```
 
 ## Project structure
 
