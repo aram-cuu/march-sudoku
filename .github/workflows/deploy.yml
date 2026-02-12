@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -52,18 +53,11 @@ jobs:
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             march_sudoku/build/app/outputs/flutter-apk/app-release.apk
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Upload web build to release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            march_sudoku/build/web/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
