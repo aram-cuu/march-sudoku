@@ -15,3 +15,23 @@ variable "environment" {
   type        = string
   default     = "production"
 }
+
+variable "AWS_ACCESS_KEY_ID" {
+  description = "AWS access key (set in TF Cloud workspace)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "AWS_SECRET_ACCESS_KEY" {
+  description = "AWS secret key (set in TF Cloud workspace)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "AWS_REGION" {
+  description = "AWS region (set in TF Cloud workspace)"
+  type        = string
+  default     = ""
+}
