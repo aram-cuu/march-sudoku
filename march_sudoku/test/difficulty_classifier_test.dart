@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:march_sudoku/models/sudoku_board.dart';
 import 'package:march_sudoku/services/sudoku_parser.dart';
 import 'package:march_sudoku/services/difficulty_classifier.dart';
 

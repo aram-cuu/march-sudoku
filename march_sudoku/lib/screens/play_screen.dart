@@ -236,7 +236,7 @@ class _SudokuGrid extends StatelessWidget {
                           ),
                         ),
                         color: isSelected
-                            ? Colors.blue.withOpacity(0.3)
+                            ? Colors.blue.withValues(alpha: 0.3)
                             : Colors.transparent,
                       ),
                       child: Center(
