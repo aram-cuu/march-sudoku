@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => GameProvider(),
       child: MaterialApp(
-        title: 'Sudoku March',
+        title: 'Sudoku',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
